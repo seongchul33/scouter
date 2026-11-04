@@ -97,7 +97,34 @@ function svgArt(c,id){
 var WAL={};
 function isSeed(id){return SEEDS.indexOf(id)>=0}
 function series(seed){var r=rngFor('s:'+seed),v=new Array(91);v[90]=1;var drift=(r()-.45)*0.006;for(var j=89;j>=0;j--)v[j]=v[j+1]*(1-drift+(r()-.5)*0.035);return v}
-function claimFor(addr,c,id){return rngFor('cl:'+addr+c+id)()<.4}
+/* ========== Mudwater 신청 여부 (온체인 실시간) ==========
+   Totems 컨트랙트(mudwater.bayc.com/v1/release.json 의 entitlementContract)를 직접 조회.
+   ape 키: BAYC = tokenId, MAYC = tokenId | 2^255 */
+var TOTEMS='0x1Be98Ff2D1FB66Abcb9809c6dc90DEdE1f97eeC8';
+var DELEG='0x00000000000000447e69651d841bD8D104Bed493';
+var MW={},MWQ=[],mwT=null;
+function hex64(n){return BigInt(n).toString(16).padStart(64,'0')}
+function mwArg(c,id){return c==='MAYC'?(BigInt(id)|(1n<<255n)).toString(16).padStart(64,'0'):hex64(id)}
+function mwOf(c,id){if(!COLS[c]||!COLS[c].packs)return null;var k=ikey(c,id);if(!MW[k]){MW[k]={status:'loading'};MWQ.push([c,id]);clearTimeout(mwT);mwT=setTimeout(flushMw,20)}return MW[k]}
+function flushMw(){
+  var list=MWQ.splice(0,40);if(!list.length)return;
+  var b=[];list.forEach(function(x,i){var a=mwArg(x[0],x[1]);
+    b.push({jsonrpc:'2.0',id:i*3,method:'eth_call',params:[{to:TOTEMS,data:'0x0361bf14'+a},'latest']});
+    b.push({jsonrpc:'2.0',id:i*3+1,method:'eth_call',params:[{to:TOTEMS,data:'0x7ed0f1c1'+a},'latest']});
+    b.push({jsonrpc:'2.0',id:i*3+2,method:'eth_call',params:[{to:TOTEMS,data:'0x933f4f6f'+a},'latest']})});
+  rpc(b).then(function(res){
+    var g=function(i){var o=(res||[]).filter(function(r){return r.id===i})[0];return o&&o.result};
+    list.forEach(function(x,i){var r=g(i*3),d=g(i*3+1),c=g(i*3+2),k=ikey(x[0],x[1]);
+      if(!r||r==='0x'){MW[k]={status:'err'};return}
+      var cl='0x'+c.slice(-40);MW[k]={status:'ok',left:parseInt(r,16),done:parseInt(d,16),claimant:/^0x0+$/.test(cl)?null:cl}});
+  }).catch(function(){list.forEach(function(x){MW[ikey(x[0],x[1])]={status:'err'}})})
+  .then(function(){softRender();if(MWQ.length)setTimeout(flushMw,40)});
+}
+/* NFT 하나의 미신청 팩 수. 조회 전/실패/대상 아님이면 0 */
+function packsLeft(c,id){var m=mwOf(c,id);return m&&m.status==='ok'?m.left:0}
+/* delegate.xyz v2: 지갑의 위임 건수 (나가는/들어오는) */
+function delegCount(hex){if(!hex||hex.length<130)return 0;return parseInt(hex.slice(66,130),16)||0}
+function padAddr(a){return a.slice(2).toLowerCase().padStart(64,'0')}
 function sampleWallet(id){
   var key=id.toLowerCase(),isEns=key.slice(-4)==='.eth',addr=isEns?addrFor(key):key;
   var r=rngFor('p:'+addr),big=SEEDS.indexOf(key)>-1&&SEEDS.indexOf(key)<6;
@@ -108,7 +135,7 @@ function sampleWallet(id){
   return {key:key,id:isSeed(key)?key:key,addr:addr,ens:isEns?key:(SEED_ADDR[addr]&&SEED_ADDR[addr].slice(-4)==='.eth'?SEED_ADDR[addr]:null),nfts:nfts,eth:Math.round(r()*4000)/100,ape:Math.floor(r()*3000),real:false,ratio:series(addr),vault:r()<.45,res:Math.floor(r()*30),status:'ok'};
 }
 function finish(p){
-  p.nfts.forEach(function(x){x.claimed=claimFor(p.addr,x.c,x.id)});
+  p.nfts.forEach(function(x){mwOf(x.c,x.id)});
   p.nfts.sort(function(a,b){return floorOf(b.c)-floorOf(a.c)});
   return p;
 }
@@ -128,12 +155,12 @@ function loadReal(key){
   resolve.then(function(info){
     var q=Object.keys(COLS).map(function(c){return 'contractAddresses[]='+COLS[c].addr}).join('&');
     var nftP=getJSON(API+'getNFTsForOwner?owner='+info.addr+'&'+q+'&withMetadata=true&pageSize=100');
-    var balP=rpc([{jsonrpc:'2.0',id:1,method:'eth_getBalance',params:[info.addr,'latest']},{jsonrpc:'2.0',id:2,method:'eth_call',params:[{to:APE_TOKEN,data:'0x70a08231'+info.addr.slice(2).padStart(64,'0')},'latest']}]).catch(function(){return[]});
+    var balP=rpc([{jsonrpc:'2.0',id:1,method:'eth_getBalance',params:[info.addr,'latest']},{jsonrpc:'2.0',id:2,method:'eth_call',params:[{to:APE_TOKEN,data:'0x70a08231'+info.addr.slice(2).padStart(64,'0')},'latest']},{jsonrpc:'2.0',id:3,method:'eth_call',params:[{to:DELEG,data:'0x51525e9a'+padAddr(info.addr)},'latest']},{jsonrpc:'2.0',id:4,method:'eth_call',params:[{to:DELEG,data:'0x42f87c25'+padAddr(info.addr)},'latest']}]).catch(function(){return[]});
     return Promise.all([nftP,balP]).then(function(res){
       var j=res[0],b=res[1]||[],nfts=[];
       (j.ownedNfts||[]).forEach(function(n){var c=BY_ADDR[n.contract.address.toLowerCase()];if(!c)return;var id=+n.tokenId;storeMeta(ikey(c,id),n);nfts.push({c:c,id:id})});
-      var get=function(i){var x=b.filter&&b.filter(function(o){return o.id===i})[0];return x&&x.result?parseInt(x.result,16)/1e18:0};
-      var p={key:key,id:key,addr:info.addr,ens:info.ens,nfts:nfts,more:j.totalCount>nfts.length?j.totalCount:0,eth:get(1),ape:get(2),real:true,ratio:series(info.addr),vault:false,res:Math.floor(rngFor('res'+info.addr)()*30),status:'ok'};
+      var raw=function(i){var x=b.filter&&b.filter(function(o){return o.id===i})[0];return x&&x.result},get=function(i){var x=b.filter&&b.filter(function(o){return o.id===i})[0];return x&&x.result?parseInt(x.result,16)/1e18:0};
+      var p={key:key,id:key,addr:info.addr,ens:info.ens,nfts:nfts,more:j.totalCount>nfts.length?j.totalCount:0,eth:get(1),ape:get(2),real:true,ratio:series(info.addr),vault:delegCount(raw(3))>0,delegOut:delegCount(raw(3)),delegIn:delegCount(raw(4)),res:Math.floor(rngFor('res'+info.addr)()*30),status:'ok'};
       WAL[key]=finish(p);
     });
   }).catch(function(e){WAL[key]={key:key,id:key,status:'err',msg:isEns?'이 ENS 이름을 찾지 못했습니다.':'지갑 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'}})
@@ -143,7 +170,7 @@ function nftValue(p){return p.nfts.reduce(function(a,x){return a+floorOf(x.c)*LI
 function total(p){return nftValue(p)+p.eth*LIVE.eth+p.ape*LIVE.ape}
 function vals(p){var t=total(p);return p.ratio.map(function(x){return x*t})}
 function ret(p,d){return p.ratio[90]/p.ratio[90-d]-1}
-function unclaimed(p){return p.nfts.reduce(function(a,x){return a+(x.claimed?0:COLS[x.c].packs)},0)}
+function unclaimed(p){return p.nfts.reduce(function(a,x){return a+packsLeft(x.c,x.id)},0)}
 function topNft(p){return p.nfts[0]}
 
 /* ========== 저장 (브라우저) ========== */
@@ -241,8 +268,8 @@ var S={rank:30,period:30,mePeriod:30,pop:'floor',v3:false};
 function walletName(p){return p.ens||short(p.addr)}
 function whoCell(p){var t=topNft(p);return '<div class="who"><span class="th">'+(t?artHtml(t.c,t.id):'')+'</span><div style="min-width:0"><div class="nm">'+esc(walletName(p))+'</div><div class="sm">'+short(p.addr)+'</div></div></div>'}
 function nftCard(n,opt){
-  opt=opt||{};var C=COLS[n.c],pk=C.packs&&n.claimed===false;
-  return '<a class="card" href="#" data-nav="/nft/'+n.c+'/'+n.id+(opt.owner?'?o='+encodeURIComponent(opt.owner):'')+'"><div style="position:relative">'+(opt.rank?'<span class="rkb">#'+opt.rank+'</span>':'')+(pk?'<span class="pk">미신청 '+C.packs+'팩</span>':'')+artHtml(n.c,n.id)+'<span class="b3d" data-nav="/nft/'+n.c+'/'+n.id+'?v=3d'+(opt.owner?'&o='+encodeURIComponent(opt.owner):'')+'">3D 보기</span></div>'
+  opt=opt||{};var C=COLS[n.c],pk=packsLeft(n.c,n.id);
+  return '<a class="card" href="#" data-nav="/nft/'+n.c+'/'+n.id+(opt.owner?'?o='+encodeURIComponent(opt.owner):'')+'"><div style="position:relative">'+(opt.rank?'<span class="rkb">#'+opt.rank+'</span>':'')+(pk?'<span class="pk">미신청 '+pk+'팩</span>':'')+artHtml(n.c,n.id)+'<span class="b3d" data-nav="/nft/'+n.c+'/'+n.id+'?v=3d'+(opt.owner?'&o='+encodeURIComponent(opt.owner):'')+'">3D 보기</span></div>'
   +'<div class="in"><div class="t1"><b>'+n.c+'</b><span>#'+n.id+'</span></div><div class="t2">'+(opt.sub?esc(opt.sub):C.name)+'</div>'
   +'<div class="t3"><div><small>FLOOR</small><b>'+fmtEth(C.floor)+' ETH</b></div><span class="tag '+C.ut+'">'+C.use.split(' ·')[0]+'</span></div></div></a>';
 }
@@ -274,7 +301,7 @@ function myBlock(){
    +'<div class="mygrid"><div class="panel"><div class="ph"><h3>내 지갑</h3></div><table><thead><tr><th>지갑</th><th class="r">자산</th><th class="r hide-m">'+d+'D</th><th class="r">미신청</th></tr></thead><tbody>'
    +ps.map(function(p){var x=ret(p,d),u=unclaimed(p);return '<tr data-nav="/wallet/'+encodeURIComponent(p.id)+'"><td>'+whoCell(p)+'</td><td class="r num">'+fmtUsd(total(p))+'</td><td class="r num hide-m '+cls(x)+'">'+fmtPct(x)+'</td><td class="r num" style="color:var(--vio)">'+(u?u+'팩':'—')+'</td></tr>'}).join('')+'</tbody></table></div>'
    +'<div class="panel"><div class="ph"><h3>내 NFT 상위 '+Math.min(6,nfts.length)+'개<small>바닥가 높은 순</small></h3>'+(nfts.length>6?'<a href="#" class="more" data-nav="/me">전체 '+nfts.length+'개 →</a>':'')+'</div><div class="mini">'
-   +nfts.slice(0,6).map(function(x){var C=COLS[x.n.c],pk=C.packs&&x.n.claimed===false;return '<a class="mcard" href="#" data-nav="/nft/'+x.n.c+'/'+x.n.id+'?o='+encodeURIComponent(x.o.id)+'"><div style="position:relative">'+artHtml(x.n.c,x.n.id)+(pk?'<span class="pk">'+C.packs+'팩</span>':'')+'</div><div class="mi"><b>'+x.n.c+' #'+x.n.id+'</b><span>'+fmtEth(C.floor)+' ETH</span></div></a>'}).join('')
+   +nfts.slice(0,6).map(function(x){var C=COLS[x.n.c],pk=packsLeft(x.n.c,x.n.id);return '<a class="mcard" href="#" data-nav="/nft/'+x.n.c+'/'+x.n.id+'?o='+encodeURIComponent(x.o.id)+'"><div style="position:relative">'+artHtml(x.n.c,x.n.id)+(pk?'<span class="pk">'+pk+'팩</span>':'')+'</div><div class="mi"><b>'+x.n.c+' #'+x.n.id+'</b><span>'+fmtEth(C.floor)+' ETH</span></div></a>'}).join('')
    +'</div></div></div></div>';
   return h;
 }
@@ -282,7 +309,7 @@ function kpiFloor(c){var C=COLS[c];return '<div class="panel kpi"><div class="k"
 
 /* ========== 가이드 ========== */
 function guideBlock(ps){
-  var un=ps.reduce(function(a,p){return a+unclaimed(p)},0),res=ps.reduce(function(a,p){return a+p.res},0),vault=ps.some(function(p){return p.vault});
+  var un=ps.reduce(function(a,p){return a+unclaimed(p)},0),res=ps.reduce(function(a,p){return a+p.res},0),vault=ps.some(function(p){return p.vault}),din=ps.reduce(function(a,p){return a+(p.delegIn||0)},0);
   var hasDeed=ps.some(function(p){return p.nfts.some(function(n){return n.c==='OTHERDEED'})});
   var cr=rngFor('craft:'+ps.map(function(p){return p.addr}).join()),craft=[{n:'고급 촉매제 제작 후 판매',m:'희귀 파편 '+(4+Math.floor(cr()*12))+'개',g:.08+cr()*.22},{n:'영지 보너스 조합 제작',m:'파편 + 침전물',g:.03+cr()*.15},{n:'침전물 그대로 판매',m:'침전물 '+(10+Math.floor(cr()*40))+'개',g:-.02+cr()*.06}];
   var o='<div class="sec"><div class="sh"><div><h2>플레이 가이드</h2><p>지금 할 수 있는 것부터</p></div></div><div class="guide">';
@@ -293,7 +320,7 @@ function guideBlock(ps){
   o+='</div></div>';
   o+='<div class="sec"><div class="sh"><div><h2>제작 경로 추천</h2><p>보유 자원으로 만들 수 있는 것</p></div></div><div class="panel"><table><thead><tr><th>경로</th><th>필요 자원</th><th class="r">예상 수익률</th></tr></thead><tbody>'+craft.map(function(c){return '<tr style="cursor:default"><td style="font-weight:700">'+c.n+'</td><td style="color:var(--sub)">'+c.m+'</td><td class="r num '+cls(c.g)+'">'+fmtPct(c.g)+'</td></tr>'}).join('')+'</tbody></table></div></div>';
   o+='<div class="sec"><div class="sh"><div><h2>처음 시작하는 순서</h2></div></div><div class="steps"><div class="panel step"><b>Otherside 입장</b><span>내 지갑 또는 위임 지갑으로 접속</span></div><div class="panel step"><b>아바타 적용</b><span>아바타 변경(F1)에서 내 NFT 선택</span></div><div class="panel step"><b>퀘스트 · Mudwater 대전</b><span>일일 퀘스트 또는 카드 대전</span></div><div class="panel step"><b>모임 · 행사</b><span>소모임과 행사에 참여</span></div></div></div>';
-  o+='<div class="sec"><div class="panel note"><i>↗</i><div>'+(vault?'보관 지갑이 위임으로 연결되어 있습니다. 사용 지갑으로 접속하면 NFT를 옮기지 않고 게임에서 쓸 수 있습니다.':'고가 NFT를 보관 지갑에 두었다면 <a href="https://delegate.xyz" target="_blank" rel="noopener">delegate.xyz</a>에서 위임을 설정해 NFT를 옮기지 않고 접속할 수 있습니다.')+'</div></div></div>';
+  o+='<div class="sec"><div class="panel note"><i>↗</i><div>'+(din?'이 지갑은 다른 지갑에서 위임을 '+din+'건 받았습니다 (delegate.xyz). 위임한 지갑의 NFT로 게임에 접속하고, 해당 ape의 Mudwater 팩도 이 지갑에서 신청할 수 있습니다.':vault?'보관 지갑이 위임으로 연결되어 있습니다 (delegate.xyz). 사용 지갑으로 접속하면 NFT를 옮기지 않고 게임에서 쓸 수 있습니다.':'고가 NFT를 보관 지갑에 두었다면 <a href="https://delegate.xyz" target="_blank" rel="noopener">delegate.xyz</a>에서 위임을 설정해 NFT를 옮기지 않고 접속할 수 있습니다.')+'</div></div></div>';
   return o;
 }
 
@@ -334,7 +361,11 @@ function viewNft(c,tid,owner){
   var ownerId=owner||(D.owner||null),op=ownerId?wallet(ownerId):null;
   if(op&&op.status!=='ok')op=null;
   var held=op&&op.nfts?op.nfts.filter(function(n){return n.c===c&&n.id===tid})[0]:null;
-  var claimed=held?held.claimed:claimFor(ownerId||'x',c,tid);
+  var mw=mwOf(c,tid),left=mw&&mw.status==='ok'?mw.left:0;
+  var deleg=mw&&mw.claimant&&ownerId&&mw.claimant!==ownerId.toLowerCase();
+  var mwText=!mw?'':mw.status==='loading'?'카드팩 신청 여부 확인 중…':mw.status==='err'?'카드팩 신청 여부를 불러오지 못했습니다.'
+    :left>0?'받지 않은 카드팩 <b>'+left+'팩</b>'+(mw.done?' (총 '+(left+mw.done)+'팩 중 '+mw.done+'팩 신청함)':'')+'. 마감 '+dday()+'. 판매하면 남은 팩도 함께 넘어갑니다.'+(deleg?' 신청은 위임받은 지갑 <a href="#" data-nav="/wallet/'+mw.claimant+'" class="mono">'+short(mw.claimant)+'</a>에서 할 수 있습니다.':'')
+    :mw.done?'카드팩 '+mw.done+'팩을 모두 받았습니다.':'이 NFT의 카드팩은 아직 배포되지 않았습니다.';
   var r=rngFor('n:'+c+tid),s=[],cur=1;for(var i=0;i<60;i++){cur=cur*(1+(r()-.5)*0.05);s.push(cur)}var sc=C.floor/s[59];s=s.map(function(v){return v*sc});
   var tr=(M.traits||[]).filter(function(t){return t&&t.trait_type&&t.value!==undefined&&t.value!==''}).slice(0,16);
   var row=function(a,b){return '<div class="kv"><span>'+a+'</span><b>'+b+'</b></div>'};
@@ -344,8 +375,8 @@ function viewNft(c,tid,owner){
   var can='<div class="can">'
    +(c==='OTHERDEED'?'<div><span class="tag y">영지</span><span>자원 채집과 수수료 설정이 가능한 땅. 다른 플레이어가 채집하면 수수료를 받습니다.</span></div>':'<div><span class="tag g">아바타</span><span>Otherside 3D 아바타로 사용. 아바타 변경(F1)에서 선택.</span></div>')
    +(c==='KODA'?'<div><span class="tag y">영지 보너스</span><span>영지 채집에서 게임 내 이점.</span></div>':'')
-   +(C.packs?'<div><span class="tag v">Mudwater</span><span>'+(!claimed?'받지 않은 카드팩 <b>'+C.packs+'팩</b>. 마감 '+dday()+'. 판매하면 팩도 함께 넘어갑니다.':'카드팩 '+C.packs+'팩을 이미 받았습니다.')+'</span></div>':'')
-   +'</div>'+(C.packs&&!claimed?'<div class="links"><a class="btn pri sm" href="https://mudwater.bayc.com" target="_blank" rel="noopener">Mudwater 공식 사이트 ↗</a></div>':'');
+   +(mw?'<div><span class="tag v">Mudwater</span><span>'+mwText+'</span></div>':'')
+   +'</div>'+(left>0?'<div class="links"><a class="btn pri sm" href="https://mudwater.bayc.com" target="_blank" rel="noopener">Mudwater 공식 사이트 ↗</a></div>':'');
   var right='<div class="nright"><div class="nhead"><div><a class="crumb" href="#" data-fill="'+c+'">'+C.name+'</a><h1>'+c+' #'+tid+'</h1>'
    +'<div class="owner">'+(D.status==='loading'?'소유자 확인 중…':ownerId?'소유자 <a href="#" data-nav="/wallet/'+encodeURIComponent(op&&op.id||ownerId)+'">'+esc(op?walletName(op):short(ownerId))+'</a>':'소유자 정보 없음')+(op?' · 지갑 자산 '+fmtUsd(total(op))+' · NFT '+op.nfts.length+'개':'')+'</div></div>'
    +'<div class="pricebox"><small>컬렉션 바닥가</small><div class="p">'+fmtEth(C.floor)+' ETH</div><span>'+fmtUsd(C.floor*LIVE.eth)+(LIVE.floorLive[c]?' · OpenSea 실시간':'')+'</span></div></div>'
