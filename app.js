@@ -289,7 +289,7 @@ function viewHome(){
 function myBlock(){
   var ids=loadSaved();
   var head='<div class="sh"><div><h2>내 정보</h2><p>저장한 지갑을 합쳐서 보여 줍니다</p></div>'+(ids.length?'<a href="#" class="more" data-nav="/me">마이페이지 전체 보기 →</a>':'')+'</div>';
-  if(!ids.length)return '<div class="sec">'+head+'<div class="panel empty"><b>저장한 지갑이 없습니다</b>지갑을 검색한 뒤 <b style="display:inline;color:#0F766E">+ 내 지갑 추가</b>를 누르면 여기에 자산과 받을 수 있는 혜택이 나옵니다.<div style="margin-top:16px"><button class="btn pri" data-act="save" data-id="demo-whale.eth">예시 지갑으로 보기</button></div></div></div>';
+  if(!ids.length)return '<div class="sec">'+head+'<div class="panel empty"><b>저장한 지갑이 없습니다</b>지갑을 검색한 뒤 <b style="display:inline;color:#6D28D9">+ 내 지갑 추가</b>를 누르면 여기에 자산과 받을 수 있는 혜택이 나옵니다.<div style="margin-top:16px"><button class="btn pri" data-act="save" data-id="demo-whale.eth">예시 지갑으로 보기</button></div></div></div>';
   var all=ids.map(wallet),ps=all.filter(function(p){return p.status==='ok'});
   if(!ps.length)return '<div class="sec">'+head+'<div class="stats">'+[1,2,3,4].map(function(){return '<div class="panel stat"><div class="skl" style="width:50%"></div><div class="skl" style="height:22px;width:70%"></div></div>'}).join('')+'</div></div>';
   var d=S.mePeriod,sum=new Array(91).fill(0);ps.forEach(function(p){vals(p).forEach(function(x,i){sum[i]+=x})});
@@ -361,10 +361,10 @@ function viewNft(c,tid,owner){
   var ownerId=owner||(D.owner||null),op=ownerId?wallet(ownerId):null;
   if(op&&op.status!=='ok')op=null;
   var held=op&&op.nfts?op.nfts.filter(function(n){return n.c===c&&n.id===tid})[0]:null;
-  var mw=mwOf(c,tid),left=mw&&mw.status==='ok'?mw.left:0;
+  var mw=mwOf(c,tid),pleft=mw&&mw.status==='ok'?mw.left:0;
   var deleg=mw&&mw.claimant&&ownerId&&mw.claimant!==ownerId.toLowerCase();
   var mwText=!mw?'':mw.status==='loading'?'카드팩 신청 여부 확인 중…':mw.status==='err'?'카드팩 신청 여부를 불러오지 못했습니다.'
-    :left>0?'받지 않은 카드팩 <b>'+left+'팩</b>'+(mw.done?' (총 '+(left+mw.done)+'팩 중 '+mw.done+'팩 신청함)':'')+'. 마감 '+dday()+'. 판매하면 남은 팩도 함께 넘어갑니다.'+(deleg?' 신청은 위임받은 지갑 <a href="#" data-nav="/wallet/'+mw.claimant+'" class="mono">'+short(mw.claimant)+'</a>에서 할 수 있습니다.':'')
+    :pleft>0?'받지 않은 카드팩 <b>'+pleft+'팩</b>'+(mw.done?' (총 '+(pleft+mw.done)+'팩 중 '+mw.done+'팩 신청함)':'')+'. 마감 '+dday()+'. 판매하면 남은 팩도 함께 넘어갑니다.'+(deleg?' 신청은 위임받은 지갑 <a href="#" data-nav="/wallet/'+mw.claimant+'" class="mono">'+short(mw.claimant)+'</a>에서 할 수 있습니다.':'')
     :mw.done?'카드팩 '+mw.done+'팩을 모두 받았습니다.':'이 NFT의 카드팩은 아직 배포되지 않았습니다.';
   var r=rngFor('n:'+c+tid),s=[],cur=1;for(var i=0;i<60;i++){cur=cur*(1+(r()-.5)*0.05);s.push(cur)}var sc=C.floor/s[59];s=s.map(function(v){return v*sc});
   var tr=(M.traits||[]).filter(function(t){return t&&t.trait_type&&t.value!==undefined&&t.value!==''}).slice(0,16);
@@ -376,7 +376,7 @@ function viewNft(c,tid,owner){
    +(c==='OTHERDEED'?'<div><span class="tag y">영지</span><span>자원 채집과 수수료 설정이 가능한 땅. 다른 플레이어가 채집하면 수수료를 받습니다.</span></div>':'<div><span class="tag g">아바타</span><span>Otherside 3D 아바타로 사용. 아바타 변경(F1)에서 선택.</span></div>')
    +(c==='KODA'?'<div><span class="tag y">영지 보너스</span><span>영지 채집에서 게임 내 이점.</span></div>':'')
    +(mw?'<div><span class="tag v">Mudwater</span><span>'+mwText+'</span></div>':'')
-   +'</div>'+(left>0?'<div class="links"><a class="btn pri sm" href="https://mudwater.bayc.com" target="_blank" rel="noopener">Mudwater 공식 사이트 ↗</a></div>':'');
+   +'</div>'+(pleft>0?'<div class="links"><a class="btn pri sm" href="https://mudwater.bayc.com" target="_blank" rel="noopener">Mudwater 공식 사이트 ↗</a></div>':'');
   var right='<div class="nright"><div class="nhead"><div><a class="crumb" href="#" data-fill="'+c+'">'+C.name+'</a><h1>'+c+' #'+tid+'</h1>'
    +'<div class="owner">'+(D.status==='loading'?'소유자 확인 중…':ownerId?'소유자 <a href="#" data-nav="/wallet/'+encodeURIComponent(op&&op.id||ownerId)+'">'+esc(op?walletName(op):short(ownerId))+'</a>':'소유자 정보 없음')+(op?' · 지갑 자산 '+fmtUsd(total(op))+' · NFT '+op.nfts.length+'개':'')+'</div></div>'
    +'<div class="pricebox"><small>컬렉션 바닥가</small><div class="p">'+fmtEth(C.floor)+' ETH</div><span>'+fmtUsd(C.floor*LIVE.eth)+(LIVE.floorLive[c]?' · OpenSea 실시간':'')+'</span></div></div>'
@@ -507,7 +507,7 @@ function build3d(host,c,id){
   host.innerHTML='';host.appendChild(R.domElement);
   var sc=new T.Scene(),cam=new T.PerspectiveCamera(32,W/H,.1,100);
   sc.add(new T.HemisphereLight(0xffffff,0x9aa8b8,.8));var dl=new T.DirectionalLight(0xffffff,.8);dl.position.set(3,5,4);sc.add(dl);var bl=new T.DirectionalLight(0xbff3ea,.4);bl.position.set(-4,2,-3);sc.add(bl);
-  var ring=mesh(new T.TorusGeometry(1.3,.035,8,64),mat('#1FC8B0',{e:'#1FC8B0',ei:.4}));ring.rotation.x=Math.PI/2;sc.add(ring);
+  var ring=mesh(new T.TorusGeometry(1.3,.035,8,64),mat('#8B5CF6',{e:'#8B5CF6',ei:.4}));ring.rotation.x=Math.PI/2;sc.add(ring);
   var disc=mesh(new T.CircleGeometry(1.3,48),new T.MeshStandardMaterial({color:0xDCE3EC,roughness:1}),0,-.005,0);disc.rotation.x=-Math.PI/2;sc.add(disc);
   var av;var tr=(META[ikey(c,id)]||{}).traits||[];
   av=c==='OTHERDEED'?mkDeed(tr,c,id):c==='KODA'?mkKoda(tr,c,id):mkApe(tr,c,id);
