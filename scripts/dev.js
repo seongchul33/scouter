@@ -37,6 +37,6 @@ http.createServer((req, res) => {
     res.end(data);
   });
 }).listen(PORT, () => {
-  console.log(`Scouter dev server → http://localhost:${PORT}`);
+  console.log(`Otherbridge dev server → http://localhost:${PORT}`);
   if (!process.env.ALCHEMY_API_KEY) console.log('※ ALCHEMY_API_KEY 없음: 공용 demo 키로 동작 (호출 제한 있음)');
 });

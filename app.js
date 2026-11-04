@@ -279,7 +279,7 @@ var PER=[[7,'7D'],[30,'30D'],[90,'90D']];
 /* ========== 홈 ========== */
 function viewHome(){
   var chips=['demo-whale.eth','BAYC #5769','MAYC #5000','KODA #3829'].map(function(x){return '<a href="#" data-fill="'+esc(x)+'">'+esc(x)+'</a>'}).join('');
-  var h='<section class="hero"><div class="big"><i>⚓</i>SCOUTER</div><p>지갑과 NFT를 검색하고, 오늘의 플레이 가이드를 확인하세요</p>'
+  var h='<section class="hero"><div class="big"><img src="img/logo-icon.png" alt=""><span>otherbridge</span></div><p>지갑과 NFT를 검색하고, 오늘의 플레이 가이드를 확인하세요</p>'
    +'<div class="cats">'+CATS.map(function(c){return '<button data-act="cat" data-v="'+c[0]+'" class="'+(cat===c[0]?'on':'')+'">'+c[1]+'</button>'}).join('')+'</div><div class="sb" id="homesb"></div><div class="chips">'+chips+'</div></section>';
   h+=myBlock();
   var pop=POP.slice(0,8).map(function(n){return{c:n[0],id:n[1]}});if(S.pop==='floor')pop.sort(function(a,b){return floorOf(b.c)-floorOf(a.c)});

@@ -1,4 +1,4 @@
-# Scouter
+# Otherbridge
 
 Otherside 보유자 도우미. 빌드 도구가 필요 없는 정적 사이트이고, Vercel에 배포합니다.
 
