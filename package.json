@@ -1,0 +1,7 @@
+{
+  "name": "scouter",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev.js"
+  }
+}

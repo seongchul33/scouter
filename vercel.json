@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/api/nft/:method", "destination": "/api/nft?method=:method" }
+  ]
+}
