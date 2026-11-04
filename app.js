@@ -340,7 +340,7 @@ function viewNft(c,tid,owner){
   var row=function(a,b){return '<div class="kv"><span>'+a+'</span><b>'+b+'</b></div>'};
   var left='<div class="nleft"><div class="hero-art stage'+(S.v3?' on3d':'')+'"><div class="vt"><button data-act="v3" data-v="0" class="'+(S.v3?'':'on')+'">2D</button><button data-act="v3" data-v="1" class="'+(S.v3?'on':'')+'">3D</button></div>'+artHtml(c,tid,true)+'<div class="cv" id="cv3d"></div><div class="hint">'+(S.v3?'드래그로 회전 · 휠로 확대':'3D를 눌러 입체로 보기')+'</div></div>'+(S.v3?animBar(c):'')
    +'<div class="panel box"><div class="bh">컬렉션 정보</div>'+row('컬렉션',C.name)+row('쓰임',C.use)+row('보유 지갑',C.holders?C.holders.toLocaleString('en-US'):'—')+row('Mudwater',C.packs?'NFT당 '+C.packs+'팩':'—')+'</div>'
-   +'<div class="panel"><div class="ph" style="padding:10px 16px"><h3 style="font-size:13px">바닥가 추이</h3><span class="src">60D</span></div>'+chartHtml('n'+c+tid,s,'eth')+'</div></div>';
+   +'<div class="panel"><div class="ph" style="padding:10px 16px"><h3 style="font-size:13px">속성 '+(tr.length?'<small style="display:inline;margin-left:6px">'+tr.length+'개 · 온체인 메타데이터</small>':'')+'</h3></div>'+(tr.length?'<div class="traits">'+tr.map(function(t){return '<div class="trait"><small>'+esc(t.trait_type)+'</small><b>'+esc(t.value)+'</b></div>'}).join('')+'</div>':'<div class="box" style="color:var(--sub)">속성 정보를 불러오는 중이거나 없습니다.</div>')+'</div></div>';
   var can='<div class="can">'
    +(c==='OTHERDEED'?'<div><span class="tag y">영지</span><span>자원 채집과 수수료 설정이 가능한 땅. 다른 플레이어가 채집하면 수수료를 받습니다.</span></div>':'<div><span class="tag g">아바타</span><span>Otherside 3D 아바타로 사용. 아바타 변경(F1)에서 선택.</span></div>')
    +(c==='KODA'?'<div><span class="tag y">영지 보너스</span><span>영지 채집에서 게임 내 이점.</span></div>':'')
@@ -353,7 +353,7 @@ function viewNft(c,tid,owner){
    +'<div class="panel"><div class="ph"><h3>이 NFT로 할 수 있는 것</h3></div>'+can+'</div>'
    +'<div class="panel"><div class="ph"><h3>토큰 정보</h3></div><div class="box">'+row('토큰 ID','#'+tid)+row('희귀도 순위',M.rank?'#'+M.rank.toLocaleString('en-US'):'—')+row('체인','Ethereum')+row('규격','ERC-721')+row('컨트랙트','<a class="mono" href="https://etherscan.io/address/'+C.addr+'" target="_blank" rel="noopener">'+short(C.addr)+'</a>')
    +'<div class="links" style="padding:8px 0 0"><a class="btn sm" href="https://opensea.io/assets/ethereum/'+C.addr+'/'+tid+'" target="_blank" rel="noopener">OpenSea ↗</a><a class="btn sm" href="https://etherscan.io/nft/'+C.addr+'/'+tid+'" target="_blank" rel="noopener">Etherscan ↗</a></div></div></div>'
-   +'<div class="panel span2"><div class="ph"><h3>속성 '+(tr.length?'<small style="display:inline;margin-left:6px">'+tr.length+'개 · 온체인 메타데이터</small>':'')+'</h3></div>'+(tr.length?'<div class="traits">'+tr.map(function(t){return '<div class="trait"><small>'+esc(t.trait_type)+'</small><b>'+esc(t.value)+'</b></div>'}).join('')+'</div>':'<div class="box" style="color:var(--sub)">속성 정보를 불러오는 중이거나 없습니다.</div>')+'</div>'
+   +'<div class="panel span2"><div class="ph"><h3>바닥가 추이</h3><span class="src">60D</span></div>'+chartHtml('n'+c+tid,s,'eth')+'</div>'
    +'</div></div>';
   return '<div class="nftp">'+left+right+'</div>';
 }
