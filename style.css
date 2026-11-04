@@ -249,3 +249,8 @@ footer .wrap{display:flex;justify-content:center;gap:4px 14px;flex-wrap:wrap}
 .hero .big img{height:56px;width:auto;display:block}
 .hero .big span{background:linear-gradient(90deg,var(--ink) 45%,#7C3AED);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:-1.2px}
 @media(max-width:600px){.logo img{height:24px}.hero .big img{height:42px}}
+/* 상단 외부 링크 버튼 */
+.ext{display:flex;align-items:center;gap:6px;padding-left:14px;border-left:1px solid rgba(255,255,255,.12)}
+.ext a{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;border:1px solid rgba(255,255,255,.14);color:#CBD5E1;transition:background .15s,color .15s,border-color .15s}
+.ext a:hover{background:rgba(124,58,237,.25);border-color:#8B5CF6;color:#fff}
+@media(max-width:600px){.nav .wrap{gap:12px}.logo img{height:22px}.ext{padding-left:0;border-left:none;gap:3px}.ext a{width:26px;height:26px;border-radius:7px}.ext svg{width:14px;height:14px}.nav-r{gap:10px}}
