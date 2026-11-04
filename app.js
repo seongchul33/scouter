@@ -325,6 +325,9 @@ function guideBlock(ps){
 }
 
 /* ========== 지갑 ========== */
+/* 추가 기능(xt-*.js) 연결 지점. 각 파일이 window.XT 에 {badge, section} 을 등록한다.
+   index.html 에서 해당 <script> 한 줄을 지우면 그 기능만 빠진다. */
+function xtHtml(kind,p){return (window.XT||[]).map(function(x){try{return x[kind]?x[kind](p)||'':''}catch(e){return ''}}).join('')}
 function loadingView(t){return '<div class="whead"><div class="av"><div class="art sk" style="aspect-ratio:1"></div></div><div style="flex:1;max-width:340px"><div class="skl" style="height:26px;width:60%"></div><div class="skl" style="width:90%"></div></div></div><div class="stats">'+[1,2,3,4].map(function(){return '<div class="panel stat"><div class="skl" style="width:50%"></div><div class="skl" style="height:24px;width:70%"></div></div>'}).join('')+'</div><div class="empty">'+esc(t)+'</div>'}
 function viewWallet(id){
   var p=wallet(id);
@@ -332,7 +335,7 @@ function viewWallet(id){
   if(p.status==='err')return '<div class="panel empty"><b>'+esc(p.msg)+'</b>다른 주소나 ENS로 검색해 보세요.</div>';
   var saved=isSaved(p.id),d=S.period,v=vals(p).slice(90-d),r=ret(p,d),t=topNft(p),un=unclaimed(p);
   var h='<div class="whead"><div class="av">'+(t?artHtml(t.c,t.id):'<div class="art"></div>')+'</div><div><h1>'+esc(walletName(p))+'</h1><div class="addr">'+p.addr+'<button class="copy" data-act="copy" data-v="'+p.addr+'">복사</button><a class="copy" href="https://etherscan.io/address/'+p.addr+'" target="_blank" rel="noopener">Etherscan ↗</a></div>'
-   +'<span class="chain">ETHEREUM</span><span class="chain">SOLANA</span><span class="chain">APECHAIN</span>'+(p.real?'<span class="src live" style="margin-left:6px">온체인 실시간</span>':'')+'</div><div class="sp"></div>'
+   +'<span class="chain">ETHEREUM</span><span class="chain">SOLANA</span><span class="chain">APECHAIN</span>'+xtHtml('badge',p)+(p.real?'<span class="src live" style="margin-left:6px">온체인 실시간</span>':'')+'</div><div class="sp"></div>'
    +'<button class="btn '+(saved?'saved':'pri')+'" data-act="save" data-id="'+esc(p.id)+'">'+(saved?'✓ 내 지갑에 저장됨':'+ 내 지갑 추가')+'</button></div>';
   h+='<div class="stats"><div class="panel stat"><small>총 자산</small><b>'+fmtUsd(total(p))+'</b><em>'+fmtEth(total(p)/LIVE.eth)+' ETH</em></div>'
    +'<div class="panel stat"><small>'+d+'일 수익률</small><b class="'+cls(r)+'">'+fmtPct(r)+'</b><em>자산 변화율</em></div>'
@@ -340,7 +343,7 @@ function viewWallet(id){
    +'<div class="panel stat'+(un?' hot':'')+'"><small>받을 수 있는 혜택</small><b style="'+(un?'color:var(--vio)':'')+'">'+(un?un+'팩':'없음')+'</b><em>Mudwater '+dday()+'</em></div></div>';
   h+='<div class="panel"><div class="ph"><h3>자산 추이</h3>'+seg('period',S.period,PER)+'</div>'+chartHtml('w'+d,v,'usd')+'</div>';
   h+='<div class="sec"><div class="sh"><div><h2>보유 NFT</h2><p>'+(p.nfts.length?'바닥가 높은 순':'Otherside 대상 컬렉션 NFT가 없습니다')+'</p></div></div>'+(p.nfts.length?'<div class="cards">'+p.nfts.map(function(n){return nftCard(n,{owner:p.id})}).join('')+'</div>':'<div class="panel empty">BAYC · MAYC · Koda · Otherdeed를 보유하면 여기에 표시됩니다.</div>')+'</div>';
-  return h+guideBlock([p]);
+  return h+xtHtml('section',p)+guideBlock([p]);
 }
 
 /* ========== NFT ========== */
