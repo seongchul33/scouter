@@ -319,7 +319,7 @@ function guideBlock(ps){
   o+='<div class="panel gd"><span class="tag y">오늘 받을 수 있음</span><h4>영지 채집 자원 '+res+'개</h4><p>'+(hasDeed?'내 영지에서 채집된 자원을 받고, 다른 플레이어의 채집 수수료를 확인하세요.':'다른 영지에서 채집한 자원을 확인하고 받으세요.')+'</p></div>';
   o+='</div></div>';
   o+='<div class="sec"><div class="sh"><div><h2>제작 경로 추천</h2><p>보유 자원으로 만들 수 있는 것</p></div></div><div class="panel"><table><thead><tr><th>경로</th><th>필요 자원</th><th class="r">예상 수익률</th></tr></thead><tbody>'+craft.map(function(c){return '<tr style="cursor:default"><td style="font-weight:700">'+c.n+'</td><td style="color:var(--sub)">'+c.m+'</td><td class="r num '+cls(c.g)+'">'+fmtPct(c.g)+'</td></tr>'}).join('')+'</tbody></table></div></div>';
-  o+='<div class="sec"><div class="sh"><div><h2>처음 시작하는 순서</h2></div></div><div class="steps"><div class="panel step"><b>Otherside 입장</b><span>내 지갑 또는 위임 지갑으로 접속</span></div><div class="panel step"><b>아바타 적용</b><span>아바타 변경(F1)에서 내 NFT 선택</span></div><div class="panel step"><b>퀘스트 · Mudwater 대전</b><span>일일 퀘스트 또는 카드 대전</span></div><div class="panel step"><b>모임 · 행사</b><span>소모임과 행사에 참여</span></div></div></div>';
+  if(!xtAny('hideSteps',ps))o+='<div class="sec"><div class="sh"><div><h2>처음 시작하는 순서</h2></div></div><div class="steps"><div class="panel step"><b>Otherside 입장</b><span>내 지갑 또는 위임 지갑으로 접속</span></div><div class="panel step"><b>아바타 적용</b><span>아바타 변경(F1)에서 내 NFT 선택</span></div><div class="panel step"><b>퀘스트 · Mudwater 대전</b><span>일일 퀘스트 또는 카드 대전</span></div><div class="panel step"><b>모임 · 행사</b><span>소모임과 행사에 참여</span></div></div></div>';
   o+='<div class="sec"><div class="panel note"><i>↗</i><div>'+(din?'이 지갑은 delegate.xyz로 다른 지갑의 사용 권한을 '+din+'건 위임받았습니다. Otherside와 Mudwater에서는 위임한 지갑의 NFT를 이 지갑으로 이용할 수 있습니다.':vault?'이 지갑은 delegate.xyz로 다른 지갑에 사용 권한을 위임해 두었습니다. Otherside와 Mudwater에서는 NFT를 옮기지 않고 위임받은 지갑으로 이용할 수 있습니다.':'고가 NFT를 보관 지갑에 두었다면, <a href="https://delegate.xyz" target="_blank" rel="noopener">delegate.xyz</a>에서 위임을 설정해 Otherside와 Mudwater를 다른 지갑으로 안전하게 이용할 수 있습니다.')+'</div></div></div>';
   return o;
 }
@@ -328,6 +328,7 @@ function guideBlock(ps){
 /* 추가 기능(xt-*.js) 연결 지점. 각 파일이 window.XT 에 {badge, section} 을 등록한다.
    index.html 에서 해당 <script> 한 줄을 지우면 그 기능만 빠진다. */
 function xtHtml(kind,p){return (window.XT||[]).map(function(x){try{return x[kind]?x[kind](p)||'':''}catch(e){return ''}}).join('')}
+function xtAny(kind,arg){return (window.XT||[]).some(function(x){try{return !!(x[kind]&&x[kind](arg))}catch(e){return false}})}
 function loadingView(t){return '<div class="whead"><div class="av"><div class="art sk" style="aspect-ratio:1"></div></div><div style="flex:1;max-width:340px"><div class="skl" style="height:26px;width:60%"></div><div class="skl" style="width:90%"></div></div></div><div class="stats">'+[1,2,3,4].map(function(){return '<div class="panel stat"><div class="skl" style="width:50%"></div><div class="skl" style="height:24px;width:70%"></div></div>'}).join('')+'</div><div class="empty">'+esc(t)+'</div>'}
 function viewWallet(id){
   var p=wallet(id);

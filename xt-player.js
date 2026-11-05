@@ -11,12 +11,21 @@
     fetch(APE_RPC,{method:'POST',headers:{'content-type':'application/json'},
       body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_call',params:[{to:PROFILE,data:'0x70a08231'+a.slice(2).toLowerCase().padStart(64,'0')},'latest']})})
     .then(function(r){return r.json()})
-    .then(function(j){ST[a]={s:'ok',n:j.result&&j.result.length>2?parseInt(j.result,16):0};if(ST[a].n)softRender()})
-    .catch(function(){ST[a]={s:'err'}});
+    .then(function(j){ST[a]={s:'ok',n:j.result&&j.result.length>2?parseInt(j.result,16):0}})
+    .catch(function(){ST[a]={s:'err'}})
+    .then(function(){softRender()});
     return ST[a];
   }
   (window.XT=window.XT||[]).push({
     id:'player',
+    // 플레이어 지갑이면 '처음 시작하는 순서'를 숨긴다. 확인 중에도 숨겨서 깜빡임을 막는다.
+    hideSteps:function(ps){
+      return (ps||[]).some(function(p){
+        if(!p.real)return false;
+        var x=check(p.addr);
+        return x.s==='loading'||(x.s==='ok'&&x.n>0);
+      });
+    },
     badge:function(p){
       if(!p.real)return '';
       var x=check(p.addr);
